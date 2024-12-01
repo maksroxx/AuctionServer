@@ -1,6 +1,7 @@
 package com.roxx.database
 
 import com.roxx.database.AuctionService.Bids
+import com.roxx.database.AuctionService.Users
 import kotlinx.coroutines.Dispatchers
 import org.h2.engine.User
 import org.jetbrains.exposed.sql.*
@@ -100,23 +101,63 @@ class AuctionService(database: Database) {
             }
     }
 
-    suspend fun makeBid(userId: Int, amount: Int): Int {
+    suspend fun makeBid(userId: Int, amount: Int): Pair<Int, Int> {
         return dbQuery {
-            Bids.insert {
-                it[this.userId] = userId
-                it[this.amount] = amount
-                it[createdAt] = Instant.now().epochSecond.toInt()
-                it[status] = BidStatus.ACTIVE.name
-                it[profit] = 0
-            }[Bids.id]
+            transaction {
+                val userBalance = Users.selectAll().where { Users.id.eq(userId) }
+                    .map { it[Users.balance] }
+                    .singleOrNull() ?: throw IllegalArgumentException("User  not found")
+
+                if (userBalance < amount) {
+                    throw IllegalArgumentException("Insufficient balance")
+                }
+
+                Users.update({ Users.id.eq(userId) }) {
+                    it[balance] = userBalance - amount
+                }
+
+                val bidId = Bids.insert {
+                    it[this.userId] = userId
+                    it[this.amount] = amount
+                    it[createdAt] = Instant.now().epochSecond.toInt()
+                    it[status] = BidStatus.ACTIVE.name
+                    it[profit] = 0
+                }[Bids.id]
+
+                val updatedBalance = userBalance - amount
+                Pair(bidId, updatedBalance)
+            }
         }
     }
 
-    suspend fun deleteBid(id: Int) {
-        dbQuery {
-            Bids.deleteWhere { Bids.id.eq(id) }
+    suspend fun deleteBid(id: Int): Int {
+        return dbQuery {
+            transaction {
+                val bid = Bids.selectAll().where { Bids.id.eq(id) }.singleOrNull()
+                    ?: throw IllegalArgumentException("Bid not found")
+
+                val userId = bid[Bids.userId]
+                val amount = bid[Bids.amount]
+
+                Users.update({ Users.id.eq(userId) }) {
+                    val currentBalance = Users.selectAll().where { Users.id.eq(userId) }
+                        .map { it[balance] }
+                        .singleOrNull() ?: throw IllegalArgumentException("User  not found")
+
+                    it[balance] = currentBalance + amount
+                }
+
+                Bids.deleteWhere { Bids.id.eq(id) }
+
+                val updatedBalance = Users.selectAll().where { Users.id.eq(userId) }
+                    .map { it[Users.balance] }
+                    .singleOrNull() ?: throw IllegalArgumentException("User  not found")
+
+                updatedBalance
+            }
         }
     }
+
 
     suspend fun getBidById(bidId: Int): Bid? {
         return dbQuery {

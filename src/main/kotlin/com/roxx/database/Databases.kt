@@ -148,28 +148,29 @@ fun Application.configureRoutes() {
                         call.respond(HttpStatusCode.NotFound, "User not found.")
                     }
                 }
-                // make bid
                 post("/me/bid") {
                     val principal = call.principal<JWTPrincipal>()
                     val userId = principal?.payload?.getClaim("userId")?.asInt()
 
                     if (userId == null) {
-                        call.respond(HttpStatusCode.Unauthorized, "User Id not found in token.")
+                        call.respond(HttpStatusCode.Unauthorized, "User  Id not found in token.")
                         return@post
                     }
 
                     val bidRequest = call.receive<BidRequest>()
                     if (bidRequest.amount <= 0) {
-                        call.respond(HttpStatusCode.BadRequest, "Bid amount be greter than zero.")
+                        call.respond(HttpStatusCode.BadRequest, "Bid amount must be greater than zero.")
                         return@post
                     }
 
-                    val result = userService.makeBid(userId, bidRequest.amount)
+                    try {
+                        val (bidId, updatedBalance) = userService.makeBid(userId, bidRequest.amount)
 
-                    if (result > 0) {
-                        call.respond(HttpStatusCode.Created, result)
-                    } else {
-                        call.respond(HttpStatusCode.InternalServerError, "Failed to place bid.")
+                        call.respond(HttpStatusCode.Created, mapOf("bidId" to bidId, "balance" to updatedBalance))
+                    } catch (e: IllegalArgumentException) {
+                        call.respond(HttpStatusCode.BadRequest, e.message ?: "Invalid request.")
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, "Failed to place bid: ${e.message}")
                     }
                 }
                 // delete bid
@@ -178,7 +179,7 @@ fun Application.configureRoutes() {
                     val userId = principal?.payload?.getClaim("userId")?.asInt()
 
                     if (userId == null) {
-                        call.respond(HttpStatusCode.Unauthorized, "User Id not found in token.")
+                        call.respond(HttpStatusCode.Unauthorized, "User  Id not found in token.")
                         return@delete
                     }
 
@@ -200,8 +201,8 @@ fun Application.configureRoutes() {
                     }
 
                     try {
-                        userService.deleteBid(bidId)
-                        call.respond(HttpStatusCode.NoContent)
+                        val updatedBalance = userService.deleteBid(bidId)
+                        call.respond(HttpStatusCode.OK, updatedBalance)
                     } catch (e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "Failed to delete bid: ${e.message}")
                     }
