@@ -1,0 +1,177 @@
+openapi: "3.0.3"
+info:
+  title: "Application API"
+  description: "API for managing users and bids in the auction application."
+  version: "1.0.0"
+servers:
+  - url: "http://0.0.0.0:8080"
+paths:
+  /users:
+    post:
+      summary: "Create User"
+      description: "Creates a new user and returns a JWT token."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequestLogin'
+      responses:
+        "201":
+          description: "User  created successfully."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  token:
+                    type: "string"
+        "409":
+          description: "User  already exists."
+        "400":
+          description: "Bad request."
+
+  /users/{id}:
+    get:
+      summary: "Get User Info"
+      description: "Retrieves user information by ID."
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "User  found."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRespond'
+        "404":
+          description: "User  not found."
+
+  /login:
+    post:
+      summary: "Login User"
+      description: "Authenticates a user and returns a JWT token."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequestLogin'
+      responses:
+        "200":
+          description: "Login successful."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  token:
+                    type: "string"
+        "401":
+          description: "Invalid credentials."
+
+  /bids/complete:
+    get:
+      summary: "Complete Bids"
+      description: "Completes the bidding process."
+      responses:
+        "200":
+          description: "Bidding process completed."
+
+  /me/balance:
+    get:
+      summary: "Get User Balance"
+      description: "Retrieves the balance of the authenticated user."
+      responses:
+        "200":
+          description: "Balance retrieved."
+          content:
+            application/json:
+              schema:
+                type: "integer"
+        "401":
+          description: "Unauthorized."
+
+  /users/me:
+    get:
+      summary: "Get Current User Info"
+      description: "Retrieves the information of the currently authenticated user."
+      responses:
+        "200":
+          description: "User  found."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRespond'
+        "401":
+          description: "Authentication is required."
+
+  /bids:
+    post:
+      summary: "Create Bid"
+      description: "Creates a new bid for the authenticated user."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BidRequest'
+      responses:
+        "201":
+          description: "Bid created successfully."
+          content:
+            application/json:
+              schema:
+                type: "integer"
+        "400":
+          description: "Bid amount must be greater than zero."
+        "500":
+          description: "Failed to place bid."
+
+  /bids/{id}:
+    delete:
+      summary: "Delete Bid"
+      description: "Deletes a bid by ID for the authenticated user."
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "204":
+          description: "Bid deleted successfully."
+        "404":
+          description: "Bid not found."
+        "403":
+          description: "You can only delete your own bids."
+        "500":
+          description: "Failed to delete bid."
+
+components:
+  schemas:
+    UserRequestLogin:
+      type: "object"
+      properties:
+        username:
+          type: "string"
+        password:
+          type: "string"
+    UserRespond:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+        username:
+          type: "string"
+        balance:
+          type: "integer"
+    BidRequest:
+      type: "object"
+      properties:
+        amount:
+          type: "integer"
