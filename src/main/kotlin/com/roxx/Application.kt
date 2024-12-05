@@ -1,7 +1,6 @@
 package com.roxx
 
-import com.roxx.database.configureRoutes
-import com.roxx.jwt.configureAuth
+import com.roxx.plugins.*
 import io.ktor.server.application.*
 
 fun main(args: Array<String>) {
@@ -9,9 +8,10 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
+    configureKoin()
     configureSerialization()
     configureAuth()
-    configureRoutes()
+    configureRouting()
     configureMonitoring()
     configureHTTP()
 }

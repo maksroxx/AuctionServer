@@ -1,9 +1,6 @@
-package com.roxx.database
+package com.roxx.repository
 
-import com.roxx.database.AuctionService.Bids
-import com.roxx.database.AuctionService.Users
 import kotlinx.coroutines.Dispatchers
-import org.h2.engine.User
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -21,34 +18,14 @@ enum class BidStatus {
     COMPLETED
 }
 
-class AuctionService(database: Database) {
-    object Users : Table() {
-        val id = integer("id").autoIncrement()
-        val username = varchar("username", 255).uniqueIndex()
-        val password = varchar("password", 255)
-        val balance = integer("balance")
-
-        override val primaryKey = PrimaryKey(id)
-    }
-
-    object Bids : Table() {
-        val id = integer("id").autoIncrement()
-        val userId = integer("user_id").references(Users.id)
-        val amount = integer("amount")
-        val createdAt = integer("created_at")
-        val status = varchar("status", 20)
-        val profit = integer("profit")
-
-        override val primaryKey = PrimaryKey(id)
-    }
-
+class AuctionServiceImpl(database: Database): AuctionService {
     init {
         transaction(database) {
             SchemaUtils.create(Users, Bids)
         }
     }
 
-    suspend fun create(user: UserRequestLogin): Int = dbQuery {
+    override suspend fun create(user: UserRequestLogin): Int = dbQuery {
         val existingUser = Users.selectAll().where { Users.username eq user.username }.singleOrNull()
         if (existingUser != null) {
             return@dbQuery -1
@@ -60,7 +37,7 @@ class AuctionService(database: Database) {
         }[Users.id]
     }
 
-    suspend fun read(id: Int): UserRespond? {
+    override suspend fun read(id: Int): UserRespond? {
         return dbQuery {
             Users.selectAll()
                 .where { Users.id eq id }
@@ -75,7 +52,7 @@ class AuctionService(database: Database) {
         }
     }
 
-    suspend fun authenticate(username: String, password: String): UserRespond? {
+    override suspend fun authenticate(username: String, password: String): UserRespond? {
         return dbQuery {
             Users.selectAll().where { Users.username eq username and (Users.password eq password) }
                 .map {
@@ -89,7 +66,7 @@ class AuctionService(database: Database) {
         }
     }
 
-    suspend fun getTopUserByBalance(limit: Int): List<UsersRespond> = dbQuery {
+    override suspend fun getTopUserByBalance(limit: Int): List<UsersRespond> = dbQuery {
         Users.selectAll()
             .orderBy(Users.balance, SortOrder.DESC)
             .limit(limit)
@@ -101,7 +78,7 @@ class AuctionService(database: Database) {
             }
     }
 
-    suspend fun makeBid(userId: Int, amount: Int): Pair<Int, Int> {
+    override suspend fun makeBid(userId: Int, amount: Int): Pair<Int, Int> {
         return dbQuery {
             transaction {
                 val userBalance = Users.selectAll().where { Users.id.eq(userId) }
@@ -130,7 +107,7 @@ class AuctionService(database: Database) {
         }
     }
 
-    suspend fun deleteBid(id: Int): Int {
+    override suspend fun deleteBid(id: Int): Int {
         return dbQuery {
             transaction {
                 val bid = Bids.selectAll().where { Bids.id.eq(id) }.singleOrNull()
@@ -159,7 +136,7 @@ class AuctionService(database: Database) {
     }
 
 
-    suspend fun getBidById(bidId: Int): Bid? {
+    override suspend fun getBidById(bidId: Int): Bid? {
         return dbQuery {
             Bids.selectAll().where { Bids.id eq bidId }
                 .mapNotNull { row ->
@@ -176,7 +153,7 @@ class AuctionService(database: Database) {
         }
     }
 
-    suspend fun getBidsByUserId(userId: Int): List<Bid> = dbQuery {
+    override suspend fun getBidsByUserId(userId: Int): List<Bid> = dbQuery {
         Bids.selectAll().where { Bids.userId eq userId }
             .map { row ->
                 Bid(
@@ -190,7 +167,16 @@ class AuctionService(database: Database) {
             }
     }
 
-    suspend fun randomExchange() {
+    override suspend fun clearAllData() {
+        dbQuery {
+            transaction {
+                Bids.deleteAll()
+                Users.deleteAll()
+            }
+        }
+    }
+
+    override suspend fun randomExchange() {
         val todayStart = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().epochSecond.toInt()
         val todayEnd = todayStart + 86400
 

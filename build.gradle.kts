@@ -2,7 +2,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktor)
-    // alias(libs.plugins.kotlin.plugin.serialization)
 }
 
 group = "com.roxx"
@@ -20,9 +19,12 @@ repositories {
 }
 
 dependencies {
+    // Koin for Ktor
+    implementation("io.insert-koin:koin-ktor:3.5.6")
+    // SLF4J Logger
+    implementation("io.insert-koin:koin-logger-slf4j:3.5.6")
     implementation("io.jsonwebtoken:jjwt:0.9.1")
     implementation(libs.ktor.server.core)
-    // implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)

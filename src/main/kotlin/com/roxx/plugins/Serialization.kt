@@ -1,4 +1,4 @@
-package com.roxx
+package com.roxx.plugins
 
 import io.ktor.serialization.gson.*
 // import io.ktor.serialization.kotlinx.json.*

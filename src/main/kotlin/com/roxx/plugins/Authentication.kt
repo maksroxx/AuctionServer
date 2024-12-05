@@ -1,4 +1,4 @@
-package com.roxx.jwt
+package com.roxx.plugins
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
