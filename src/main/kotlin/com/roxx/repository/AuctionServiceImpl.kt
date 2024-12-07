@@ -18,13 +18,7 @@ enum class BidStatus {
     COMPLETED
 }
 
-class AuctionServiceImpl(database: Database): AuctionService {
-    init {
-        transaction(database) {
-            SchemaUtils.create(Users, Bids)
-        }
-    }
-
+class AuctionServiceImpl : AuctionService {
     override suspend fun create(user: UserRequestLogin): Int = dbQuery {
         val existingUser = Users.selectAll().where { Users.username eq user.username }.singleOrNull()
         if (existingUser != null) {

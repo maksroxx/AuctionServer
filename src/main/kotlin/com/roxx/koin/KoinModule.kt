@@ -11,5 +11,5 @@ val appModule = module {
             driver = "org.h2.Driver"
         )
     }
-    single { AuctionServiceImpl(get()) }
+    single { AuctionServiceImpl() }
 }

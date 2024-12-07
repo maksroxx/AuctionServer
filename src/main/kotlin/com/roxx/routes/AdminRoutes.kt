@@ -6,11 +6,6 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Route.miskRoutes(auctionServiceImpl: AuctionServiceImpl) {
-    // greeting
-    get("/") {
-        call.respondText("Business is business")
-    }
-
     // delete all data
     delete("/clear") {
         auctionServiceImpl.clearAllData()
