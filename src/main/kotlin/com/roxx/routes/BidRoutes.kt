@@ -24,13 +24,26 @@ fun Route.bidRoutes(auctionServiceImpl: AuctionServiceImpl) {
             }
         }
 
+        // last user bid
+        get("/me/bid/last") {
+            val principal = call.principal<JWTPrincipal>()
+            val userId = principal?.payload?.getClaim("userId")?.asInt()
+
+            if (userId != null) {
+                val lastBidId = auctionServiceImpl.getLastActiveBidIdToday(userId)
+                call.respond(HttpStatusCode.OK, mapOf("lastBidId" to lastBidId))
+            } else {
+                call.respond(HttpStatusCode.Unauthorized, "User ID not found in token.")
+            }
+        }
+
         // delete bid
         delete("/me/bids/{id}") {
             val principal = call.principal<JWTPrincipal>()
             val userId = principal?.payload?.getClaim("userId")?.asInt()
 
             if (userId == null) {
-                call.respond(HttpStatusCode.Unauthorized, "User  Id not found in token.")
+                call.respond(HttpStatusCode.Unauthorized, "User Id not found in token.")
                 return@delete
             }
 
@@ -53,7 +66,7 @@ fun Route.bidRoutes(auctionServiceImpl: AuctionServiceImpl) {
 
             try {
                 val updatedBalance = auctionServiceImpl.deleteBid(bidId)
-                call.respond(HttpStatusCode.OK, updatedBalance)
+                call.respond(HttpStatusCode.OK, mapOf("amount" to updatedBalance))
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, "Failed to delete bid: ${e.message}")
             }

@@ -77,7 +77,7 @@ class AuctionServiceImpl : AuctionService {
             transaction {
                 val userBalance = Users.selectAll().where { Users.id.eq(userId) }
                     .map { it[Users.balance] }
-                    .singleOrNull() ?: throw IllegalArgumentException("User  not found")
+                    .singleOrNull() ?: throw IllegalArgumentException("User not found")
 
                 if (userBalance < amount) {
                     throw IllegalArgumentException("Insufficient balance")
@@ -113,7 +113,7 @@ class AuctionServiceImpl : AuctionService {
                 Users.update({ Users.id.eq(userId) }) {
                     val currentBalance = Users.selectAll().where { Users.id.eq(userId) }
                         .map { it[balance] }
-                        .singleOrNull() ?: throw IllegalArgumentException("User  not found")
+                        .singleOrNull() ?: throw IllegalArgumentException("User not found")
 
                     it[balance] = currentBalance + amount
                 }
@@ -122,8 +122,7 @@ class AuctionServiceImpl : AuctionService {
 
                 val updatedBalance = Users.selectAll().where { Users.id.eq(userId) }
                     .map { it[Users.balance] }
-                    .singleOrNull() ?: throw IllegalArgumentException("User  not found")
-
+                    .singleOrNull() ?: throw IllegalArgumentException("User not found")
                 updatedBalance
             }
         }
@@ -171,19 +170,17 @@ class AuctionServiceImpl : AuctionService {
     }
 
     override suspend fun randomExchange() {
-        val todayStart = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().epochSecond.toInt()
-        val todayEnd = todayStart + 86400
-
         val bidsToday = dbQuery {
             Bids.selectAll().where {
-                (Bids.createdAt greaterEq todayStart) and
-                        (Bids.createdAt less todayEnd) and
-                        (Bids.status eq BidStatus.ACTIVE.name)
+                Bids.status eq BidStatus.ACTIVE.name
             }
                 .map { it[Bids.userId] to it[Bids.amount] }
         }
 
-        if (bidsToday.size < 2) return
+        if (bidsToday.size < 2) {
+            println("Недостаточно ставок для обмена: ${bidsToday.size}")
+            return
+        }
 
         for (i in bidsToday.indices) {
             val (userId1, amount1) = bidsToday[i]
@@ -191,16 +188,45 @@ class AuctionServiceImpl : AuctionService {
             println("User  $userId1 обменялся с User $userId2: $amount1 на $amount2")
 
             updateBids(userId1, amount2, amount1)
+            updateUserBalance(userId1, amount2)
             updateBids(userId2, amount1, amount2)
+            updateUserBalance(userId2, amount1)
+        }
+    }
+
+    override suspend fun getLastActiveBidIdToday(userId: Int): Int {
+        return dbQuery {
+            val lastActiveBid = Bids.selectAll()
+                .where {
+                    (Bids.status eq BidStatus.ACTIVE.name) and
+                            (Bids.userId eq userId)
+                }
+                .orderBy(Bids.createdAt, SortOrder.DESC)
+                .map { it[Bids.id] }
+                .singleOrNull()
+
+            lastActiveBid ?: -2
+        }
+    }
+
+    override suspend fun updateUserBalance(userId: Int, amount: Int) {
+        dbQuery {
+            Users.update({ Users.id.eq(userId) }) {
+                val currentBalance = Users.selectAll().where { id.eq(userId) }
+                    .map { it[balance] }
+                    .singleOrNull() ?: throw IllegalArgumentException("User not found")
+
+                it[balance] = currentBalance + amount/2
+            }
         }
     }
 
     private suspend fun updateBids(userId: Int, newAmount: Int, original: Int) {
         dbQuery {
-            Bids.update({ Bids.userId eq userId }) {
-                it[amount] = newAmount
+            Bids.update({ Bids.userId eq userId and (Bids.status eq BidStatus.ACTIVE.name) }) {
+                it[amount] = original
                 it[status] = BidStatus.COMPLETED.name
-                it[profit] = original - newAmount
+                it[profit] = newAmount - original
             }
         }
     }
