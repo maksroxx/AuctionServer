@@ -12,7 +12,12 @@ fun Application.module() {
     configureDatabase()
     configureSerialization()
     configureAuth()
-    configureRouting()
     configureMonitoring()
     configureHTTP()
+
+    auctionModule()
+}
+
+fun Application.auctionModule() {
+    configureRouting()
 }
