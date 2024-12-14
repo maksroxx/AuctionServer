@@ -3,16 +3,45 @@ package com.roxx.routes
 import com.roxx.repository.AuctionServiceImpl
 import com.roxx.repository.BidRequest
 import io.ktor.http.*
-import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Route.miskRoutes(auctionServiceImpl: AuctionServiceImpl) {
+    var isAvailable = true
     // delete all data
     delete("/clear") {
         auctionServiceImpl.clearAllData()
         call.respondText("All data cleared successfully", status = HttpStatusCode.OK)
+    }
+
+    // start service
+    post("/start") {
+        if (!isAvailable) {
+            isAvailable = true
+            call.respondText("The service is enabled", ContentType.Text.Plain)
+        } else {
+            call.respond(HttpStatusCode.Conflict, "The service is already enabled")
+        }
+    }
+
+    // stop service
+    post("/stop") {
+        if (isAvailable) {
+            isAvailable = false
+            call.respondText("The service is turned off", ContentType.Text.Plain)
+        } else {
+            call.respond(HttpStatusCode.Conflict, "The service is already turned off")
+        }
+    }
+
+    // get service status
+    get("/status") {
+        if (isAvailable) {
+            call.respondText("The service is available", ContentType.Text.Plain)
+        } else {
+            call.respond(HttpStatusCode.ServiceUnavailable, "The service is unavailable")
+        }
     }
 
     // complete all bids

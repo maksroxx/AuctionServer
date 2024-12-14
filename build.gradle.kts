@@ -19,6 +19,8 @@ repositories {
 }
 
 dependencies {
+    // JBcrypt
+    implementation("org.mindrot:jbcrypt:0.4")
     // Koin for Ktor
     implementation("io.insert-koin:koin-ktor:3.5.6")
     // SLF4J Logger
