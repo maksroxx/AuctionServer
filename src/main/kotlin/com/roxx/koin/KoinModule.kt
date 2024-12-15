@@ -1,5 +1,6 @@
 package com.roxx.koin
 
+import com.roxx.repository.AuctionService
 import com.roxx.repository.AuctionServiceImpl
 import org.jetbrains.exposed.sql.Database
 import org.koin.dsl.module
@@ -11,5 +12,7 @@ val appModule = module {
             driver = "org.h2.Driver"
         )
     }
-    single { AuctionServiceImpl() }
+    single<AuctionService> {
+        AuctionServiceImpl()
+    }
 }

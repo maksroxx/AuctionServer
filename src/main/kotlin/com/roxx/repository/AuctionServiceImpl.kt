@@ -1,5 +1,7 @@
 package com.roxx.repository
 
+import com.roxx.database.Bids
+import com.roxx.database.Users
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq

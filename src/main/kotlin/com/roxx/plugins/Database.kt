@@ -1,7 +1,7 @@
 package com.roxx.plugins
 
-import com.roxx.repository.Bids
-import com.roxx.repository.Users
+import com.roxx.database.Bids
+import com.roxx.database.Users
 import io.ktor.server.application.*
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils

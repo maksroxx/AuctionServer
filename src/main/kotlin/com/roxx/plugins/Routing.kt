@@ -1,12 +1,8 @@
 package com.roxx.plugins
 
 import com.roxx.repository.AuctionServiceImpl
-import com.roxx.routes.authRoutes
-import com.roxx.routes.bidRoutes
-import com.roxx.routes.miskRoutes
-import com.roxx.routes.userRoutes
+import com.roxx.routes.*
 import io.ktor.server.application.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -21,11 +17,7 @@ fun Application.configureRouting() {
     val auctionServiceImpl: AuctionServiceImpl by inject()
 
     routing {
-        // greeting
-        get("/") {
-            call.respondText("Business is business")
-        }
-
+        root()
         miskRoutes(auctionServiceImpl)
         userRoutes(auctionServiceImpl)
         bidRoutes(auctionServiceImpl)

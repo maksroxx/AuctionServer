@@ -1,4 +1,4 @@
-package com.roxx.repository
+package com.roxx.database
 
 import org.jetbrains.exposed.sql.Table
 
