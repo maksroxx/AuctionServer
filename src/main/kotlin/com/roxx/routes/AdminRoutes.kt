@@ -1,13 +1,13 @@
 package com.roxx.routes
 
-import com.roxx.repository.AuctionServiceImpl
+import com.roxx.repository.AuctionService
 import com.roxx.repository.BidRequest
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Route.miskRoutes(auctionServiceImpl: AuctionServiceImpl) {
+fun Route.miskRoutes(auctionServiceImpl: AuctionService) {
     var isAvailable = true
     // delete all data
     delete("/clear") {

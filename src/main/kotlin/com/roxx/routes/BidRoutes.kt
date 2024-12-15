@@ -1,6 +1,7 @@
 package com.roxx.routes
 
-import com.roxx.repository.AuctionServiceImpl
+import com.roxx.repository.AuctionService
+
 import com.roxx.repository.BidRequest
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -9,7 +10,7 @@ import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.ktor.server.response.*
 
-fun Route.bidRoutes(auctionServiceImpl: AuctionServiceImpl) {
+fun Route.bidRoutes(auctionServiceImpl: AuctionService) {
     authenticate {
         // user bids
         get("/me/bids") {

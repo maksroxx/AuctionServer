@@ -1,5 +1,6 @@
 package com.roxx.plugins
 
+import com.roxx.repository.AuctionService
 import com.roxx.repository.AuctionServiceImpl
 import com.roxx.routes.*
 import io.ktor.server.application.*
@@ -14,7 +15,7 @@ import java.time.LocalDateTime
 
 @OptIn(DelicateCoroutinesApi::class)
 fun Application.configureRouting() {
-    val auctionServiceImpl: AuctionServiceImpl by inject()
+    val auctionServiceImpl: AuctionService by inject()
 
     routing {
         root()

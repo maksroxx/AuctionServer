@@ -1,8 +1,8 @@
 package com.roxx.routes
 
-import com.roxx.repository.AuctionServiceImpl
 import com.roxx.repository.UserRequestLogin
 import com.roxx.jwt.createJWT
+import com.roxx.repository.AuctionService
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -10,7 +10,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Route.userRoutes(auctionServiceImpl: AuctionServiceImpl) {
+fun Route.userRoutes(auctionServiceImpl: AuctionService) {
     // create user
     post("/users") {
         try {
