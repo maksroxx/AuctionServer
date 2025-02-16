@@ -3,6 +3,7 @@ package com.roxx.routes
 import com.roxx.repository.UserRequestLogin
 import com.roxx.jwt.createJWT
 import com.roxx.repository.AuctionService
+import com.roxx.repository.SearchRequest
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -69,6 +70,36 @@ fun Route.userRoutes(auctionServiceImpl: AuctionService) {
                 call.respond(HttpStatusCode.OK, user)
             } else {
                 call.respond(HttpStatusCode.NotFound, "User not found.")
+            }
+        }
+
+        // search user
+        post("/search") {
+            val principal = call.principal<JWTPrincipal>()
+            val userId = principal?.payload?.getClaim("userId")?.asInt()
+
+            if (userId == null) {
+                call.respond(HttpStatusCode.Unauthorized, "User Id not found in token.")
+                return@post
+            }
+
+            val searchRequest = call.receive<SearchRequest>()
+            if (searchRequest.username.isEmpty()) {
+                call.respond(HttpStatusCode.BadRequest, "Search is empty")
+                return@post
+            }
+
+            try {
+                val user = auctionServiceImpl.searchUser(username = searchRequest.username)
+                if (user == null) {
+                    call.respond(HttpStatusCode.NoContent, "No users found.")
+                } else {
+                    call.respond(HttpStatusCode.OK, user)
+                }
+            } catch (e: IllegalArgumentException) {
+                call.respond(HttpStatusCode.BadRequest, e.message ?: "Invalid request.")
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, "Failed to search user: ${e.message}")
             }
         }
     }

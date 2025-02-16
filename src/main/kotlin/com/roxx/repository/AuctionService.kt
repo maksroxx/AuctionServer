@@ -15,4 +15,6 @@ interface AuctionService {
     suspend fun updateUserBalance(userId: Int, amount: Int)
 
     suspend fun getLastActiveBidIdToday(userId: Int): Int
+
+    suspend fun searchUser(username: String): UserRespond?
 }

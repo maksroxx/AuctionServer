@@ -12,6 +12,8 @@ import java.time.*
 data class UserRequestLogin(val username: String, val password: String)
 data class UserRespond(val id: Int, val username: String, val balance: Int)
 data class UsersRespond(val username: String, val balance: Int)
+
+data class SearchRequest(val username: String)
 data class BidRequest(val amount: Int)
 data class Bid(val id: Int, val userId: Int, val amount: Int, val createdAt: Int, val status: String, val profit: Int)
 
@@ -211,6 +213,18 @@ class AuctionServiceImpl : AuctionService {
         }
     }
 
+    override suspend fun searchUser(username: String): UserRespond? = dbQuery {
+        Users.selectAll().where { Users.username eq username }
+            .map {
+                UserRespond(
+                    id = it[Users.id],
+                    username = it[Users.username],
+                    balance = it[Users.balance]
+                )
+            }
+            .firstOrNull()
+    }
+
     override suspend fun updateUserBalance(userId: Int, amount: Int) {
         dbQuery {
             Users.update({ Users.id.eq(userId) }) {
@@ -218,7 +232,7 @@ class AuctionServiceImpl : AuctionService {
                     .map { it[balance] }
                     .singleOrNull() ?: throw IllegalArgumentException("User not found")
 
-                it[balance] = currentBalance + amount/2
+                it[balance] = currentBalance + amount / 2
             }
         }
     }
