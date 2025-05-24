@@ -1,8 +1,19 @@
 package com.roxx.repository
 
+import com.google.gson.annotations.SerializedName
 import com.roxx.database.Bids
 import com.roxx.database.Users
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.request.*
+import io.ktor.serialization.gson.*
+import io.ktor.server.application.*
 import kotlinx.coroutines.Dispatchers
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.client.plugins.contentnegotiation.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -15,7 +26,17 @@ data class UsersRespond(val username: String, val balance: Int)
 
 data class SearchRequest(val username: String)
 data class BidRequest(val amount: Int)
-data class Bid(val id: Int, val userId: Int, val amount: Int, val createdAt: Int, val status: String, val profit: Int)
+data class Bid(val id: Int, val userId: Int, val amount: Int, val createdAt: Int, val status: String, val profit: Int, val title: String)
+@Serializable
+data class DailyItemResponse(
+    @SerializedName("title")
+    val title: String,
+
+    @SerializedName("imageUrl")
+    val imageUrl: String
+)
+
+data class DailyItemDto(val title: String, val imageUrl: String)
 
 enum class BidStatus {
     ACTIVE,
@@ -23,6 +44,12 @@ enum class BidStatus {
 }
 
 class AuctionServiceImpl : AuctionService {
+    private val client = HttpClient(CIO) {
+        install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            gson()
+        }
+    }
+
     override suspend fun create(user: UserRequestLogin): Int = dbQuery {
         val existingUser = Users.selectAll().where { Users.username eq user.username }.singleOrNull()
         if (existingUser != null) {
@@ -78,6 +105,7 @@ class AuctionServiceImpl : AuctionService {
 
     override suspend fun makeBid(userId: Int, amount: Int): Pair<Int, Int> {
         return dbQuery {
+            val dailyItem = getDailyItem()
             transaction {
                 val userBalance = Users.selectAll().where { Users.id.eq(userId) }
                     .map { it[Users.balance] }
@@ -97,6 +125,7 @@ class AuctionServiceImpl : AuctionService {
                     it[createdAt] = Instant.now().epochSecond.toInt()
                     it[status] = BidStatus.ACTIVE.name
                     it[profit] = 0
+                    it[itemTitle] = dailyItem.title
                 }[Bids.id]
 
                 val updatedBalance = userBalance - amount
@@ -143,7 +172,8 @@ class AuctionServiceImpl : AuctionService {
                         amount = row[Bids.amount],
                         createdAt = row[Bids.createdAt],
                         status = row[Bids.status],
-                        profit = row[Bids.profit]
+                        profit = row[Bids.profit],
+                        title = row[Bids.itemTitle]
                     )
                 }
                 .singleOrNull()
@@ -159,7 +189,8 @@ class AuctionServiceImpl : AuctionService {
                     amount = row[Bids.amount],
                     createdAt = row[Bids.createdAt],
                     status = row[Bids.status],
-                    profit = row[Bids.profit]
+                    profit = row[Bids.profit],
+                    title = row[Bids.itemTitle]
                 )
             }
     }
@@ -223,6 +254,11 @@ class AuctionServiceImpl : AuctionService {
                 )
             }
             .firstOrNull()
+    }
+
+    override suspend fun getDailyItem(): DailyItemDto {
+        val response: DailyItemResponse = client.get("http://localhost:8844/daily").body()
+        return DailyItemDto(title = response.title, imageUrl = response.imageUrl)
     }
 
     override suspend fun updateUserBalance(userId: Int, amount: Int) {

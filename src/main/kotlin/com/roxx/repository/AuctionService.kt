@@ -17,4 +17,6 @@ interface AuctionService {
     suspend fun getLastActiveBidIdToday(userId: Int): Int
 
     suspend fun searchUser(username: String): UserRespond?
+
+    suspend fun getDailyItem(): DailyItemDto
 }

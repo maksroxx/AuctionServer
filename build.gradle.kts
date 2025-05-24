@@ -19,6 +19,8 @@ repositories {
 }
 
 dependencies {
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+    implementation("io.ktor:ktor-client-cio:2.3.4")
     // JBcrypt
     implementation("org.mindrot:jbcrypt:0.4")
     // Koin for Ktor

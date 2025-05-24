@@ -11,6 +11,11 @@ import io.ktor.server.routing.*
 import io.ktor.server.response.*
 
 fun Route.bidRoutes(auctionServiceImpl: AuctionService) {
+    // get daily item
+    get("/item") {
+        val item = auctionServiceImpl.getDailyItem()
+        call.respond(HttpStatusCode.OK, item)
+    }
     authenticate {
         // user bids
         get("/me/bids") {

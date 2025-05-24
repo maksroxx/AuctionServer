@@ -11,7 +11,6 @@ import org.koin.mp.KoinPlatform.getKoin
 fun Application.configureDatabase() {
     val database: Database = getKoin().get()
     transaction(db = database) {
-        // SchemaUtils.create(Users, Bids, Coins, UserCoins)
         SchemaUtils.create(Users, Bids)
     }
 }
