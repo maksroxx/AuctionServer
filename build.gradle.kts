@@ -21,8 +21,8 @@ repositories {
 dependencies {
     implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
     implementation("io.ktor:ktor-client-cio:2.3.4")
-    // JBcrypt
-    implementation("org.mindrot:jbcrypt:0.4")
+    // Bcrypt
+    implementation("at.favre.lib:bcrypt:0.9.0")
     // Koin for Ktor
     implementation("io.insert-koin:koin-ktor:3.5.6")
     // SLF4J Logger

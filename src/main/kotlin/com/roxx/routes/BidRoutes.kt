@@ -14,7 +14,11 @@ fun Route.bidRoutes(auctionServiceImpl: AuctionService) {
     // get daily item
     get("/item") {
         val item = auctionServiceImpl.getDailyItem()
-        call.respond(HttpStatusCode.OK, item)
+        if (item == null) {
+            call.respond(HttpStatusCode.InternalServerError)
+        } else {
+            call.respond(HttpStatusCode.OK, item)
+        }
     }
     authenticate {
         // user bids

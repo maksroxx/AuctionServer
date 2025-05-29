@@ -1,5 +1,6 @@
 package com.roxx.repository
 
+import at.favre.lib.crypto.bcrypt.BCrypt
 import com.google.gson.annotations.SerializedName
 import com.roxx.database.Bids
 import com.roxx.database.Users
@@ -55,9 +56,10 @@ class AuctionServiceImpl : AuctionService {
         if (existingUser != null) {
             return@dbQuery -1
         }
+        val hashedPassword = BCrypt.withDefaults().hashToString(12, user.password.toCharArray())
         Users.insert {
             it[username] = user.username
-            it[password] = user.password
+            it[password] = hashedPassword
             it[balance] = (10000..1000000).random()
         }[Users.id]
     }
@@ -77,17 +79,20 @@ class AuctionServiceImpl : AuctionService {
         }
     }
 
-    override suspend fun authenticate(username: String, password: String): UserRespond? {
-        return dbQuery {
-            Users.selectAll().where { Users.username eq username and (Users.password eq password) }
-                .map {
-                    UserRespond(
-                        id = it[Users.id],
-                        username = it[Users.username],
-                        balance = it[Users.balance]
-                    )
-                }
-                .singleOrNull()
+    override suspend fun authenticate(username: String, password: String): UserRespond? = dbQuery {
+        val userRow = Users.selectAll().where { Users.username eq username }.singleOrNull() ?: return@dbQuery null
+
+        val storedHash = userRow[Users.password]
+        val result = BCrypt.verifyer().verify(password.toCharArray(), storedHash)
+
+        if (result.verified) {
+            UserRespond(
+                id = userRow[Users.id],
+                username = userRow[Users.username],
+                balance = userRow[Users.balance]
+            )
+        } else {
+            null
         }
     }
 
@@ -205,29 +210,66 @@ class AuctionServiceImpl : AuctionService {
     }
 
     override suspend fun randomExchange() {
-        val bidsToday = dbQuery {
-            Bids.selectAll().where {
-                Bids.status eq BidStatus.ACTIVE.name
-            }
-                .map { it[Bids.userId] to it[Bids.amount] }
+        val activeBids = dbQuery {
+            Bids.selectAll()
+                .where { Bids.status eq BidStatus.ACTIVE.name }
+                .orderBy(Bids.amount, SortOrder.DESC)
+                .map {
+                    Bid(
+                        id = it[Bids.id],
+                        userId = it[Bids.userId],
+                        amount = it[Bids.amount],
+                        createdAt = it[Bids.createdAt],
+                        status = it[Bids.status],
+                        profit = it[Bids.profit],
+                        title = it[Bids.itemTitle]
+                    )
+                }
         }
 
-        if (bidsToday.size < 2) {
-            println("Недостаточно ставок для обмена: ${bidsToday.size}")
+        if (activeBids.size < 1) {
+            println("Недостаточно ставок для определения победителя: ${activeBids.size}")
             return
         }
 
-        for (i in bidsToday.indices) {
-            val (userId1, amount1) = bidsToday[i]
-            val (userId2, amount2) = bidsToday[(i + 1) % bidsToday.size]
-            println("User  $userId1 обменялся с User $userId2: $amount1 на $amount2")
+        val winnerBid = activeBids.first() // самый высокий bid
+        val loserBids = activeBids.drop(1)
 
-            updateBids(userId1, amount2, amount1)
-            updateUserBalance(userId1, amount2)
-            updateBids(userId2, amount1, amount2)
-            updateUserBalance(userId2, amount1)
+        // Обновляем победителя
+        dbQuery {
+            Bids.update({ Bids.id eq winnerBid.id }) {
+                it[status] = BidStatus.COMPLETED.name
+                it[profit] = (winnerBid.amount * 0.5).toInt() // +50% прибыли
+            }
+
+            Users.update({ Users.id eq winnerBid.userId }) {
+                val currentBalance = Users.selectAll().where { Users.id eq winnerBid.userId }
+                    .map { it[Users.balance] }
+                    .single()
+                it[balance] = currentBalance + (winnerBid.amount * 1.5).toInt()
+            }
         }
+
+        // Обрабатываем проигравших
+        for (loser in loserBids) {
+            dbQuery {
+                Bids.update({ Bids.id eq loser.id }) {
+                    it[status] = BidStatus.COMPLETED.name
+                    it[profit] = -loser.amount // потеря
+                }
+
+                Users.update({ Users.id eq loser.userId }) {
+                    val currentBalance = Users.selectAll().where { Users.id eq loser.userId }
+                        .map { it[Users.balance] }
+                        .single()
+                    it[balance] = currentBalance + loser.amount // возврат ставки
+                }
+            }
+        }
+
+        println("Аукцион завершён: победитель User ${winnerBid.userId}, ставка ${winnerBid.amount}")
     }
+
 
     override suspend fun getLastActiveBidIdToday(userId: Int): Int {
         return dbQuery {
@@ -269,16 +311,6 @@ class AuctionServiceImpl : AuctionService {
                     .singleOrNull() ?: throw IllegalArgumentException("User not found")
 
                 it[balance] = currentBalance + amount / 2
-            }
-        }
-    }
-
-    private suspend fun updateBids(userId: Int, newAmount: Int, original: Int) {
-        dbQuery {
-            Bids.update({ Bids.userId eq userId and (Bids.status eq BidStatus.ACTIVE.name) }) {
-                it[amount] = original
-                it[status] = BidStatus.COMPLETED.name
-                it[profit] = newAmount - original
             }
         }
     }
